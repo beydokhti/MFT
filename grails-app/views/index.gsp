@@ -1,341 +1,705 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		%{--<meta name="layout" content="main"/>--}%
-		<title>Welcome to Grails</title>
-        <g:javascript library="jquery" plugin="jquery"/>
-        <script type="text/javascript" src="${resource(dir:'/assets/js',file:'go.js')}"></script>
-        <script type="text/javascript" src="${resource(dir:'/assets/js/',file:'goSamples.js')}"></script>
-        %{--<script type="text/javascript" src="${resource(dir:'/assets/js/',file:'highlight.js')}"></script>--}%
+<html lang="en"><head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 
-	</head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
+    <title>Agency - Start Bootstrap Theme</title>
 
-<script type="text/javascript">
-    function init() {
-    if (window.goSamples)
-        goSamples();  // init for these samples -- you don't need to call this
-    var $ = go.GraphObject.make;  // for conciseness in defining templates
+    <!-- Bootstrap Core CSS -->
+    <link type="text/css" href="${resource(dir: 'css', file: 'bootstrap.css')}" />
 
-    myDiagram =
-    $(go.Diagram, "myDiagram", // must be the ID or reference to div
-    {
-    initialContentAlignment: go.Spot.Center,
-    // make sure users can only create trees
-    validCycle: go.Diagram.CycleDestinationTree,
-    // users can select only one part at a time
-    maxSelectionCount: 1,
-    layout:
-    $(go.TreeLayout,
-    {
-    treeStyle: go.TreeLayout.StyleLastParents,
-    arrangement: go.TreeLayout.ArrangementHorizontal,
-    // properties for most of the tree:
-    angle: 90,
-    layerSpacing: 35,
-    // properties for the "last parents":
-    alternateAngle: 90,
-    alternateLayerSpacing: 35,
-    alternateAlignment: go.TreeLayout.AlignmentBus,
-    alternateNodeSpacing: 20
-    }),
-    // support editing the properties of the selected person in HTML
-    "ChangedSelection": onSelectionChanged,
-    "TextEdited": onTextEdited,
-    // enable undo & redo
-    "undoManager.isEnabled": true
-    });
-
-    // when the document is modified, add a "*" to the title and enable the "Save" button
-    myDiagram.addDiagramListener("Modified", function(e) {
-    var button = document.getElementById("SaveButton");
-    if (button) button.disabled = !myDiagram.isModified;
-    var idx = document.title.indexOf("*");
-    if (myDiagram.isModified) {
-    if (idx < 0) document.title += "*";
-    } else {
-    if (idx >= 0) document.title = document.title.substr(0, idx);
-    }
-    });
-
-    var levelColors = ["#AC193D/#BF1E4B", "#2672EC/#2E8DEF", "#8C0095/#A700AE", "#5133AB/#643EBF",
-    "#008299/#00A0B1", "#D24726/#DC572E", "#008A00/#00A600", "#094AB2/#0A5BC4"];
-
-    // override TreeLayout.commitNodes to also modify the background brush based on the tree depth level
-    myDiagram.layout.commitNodes = function() {
-    go.TreeLayout.prototype.commitNodes.call(myDiagram.layout);  // do the standard behavior
-    // then go through all of the vertexes and set their corresponding node's Shape.fill
-    // to a brush dependent on the TreeVertex.level value
-    myDiagram.layout.network.vertexes.each(function(v) {
-    if (v.node) {
-    var level = v.level % (levelColors.length);
-    var colors = levelColors[level].split("/");
-    var shape = v.node.findObject("SHAPE");
-    if (shape) shape.fill = $(go.Brush, "Linear", { 0: colors[0], 1: colors[1], start: go.Spot.Left, end: go.Spot.Right });
-    }
-    });
-    }
-
-    // when a node is double-clicked, add a child to it
-    function nodeDoubleClick(e, obj) {
-    var clicked = obj.part;
-    if (clicked !== null) {
-    var thisemp = clicked.data;
-    myDiagram.startTransaction("add employee");
-    var nextkey = (myDiagram.model.nodeDataArray.length + 1).toString();
-    var newemp = { key: nextkey, name: "(new person)", title: "", parent: thisemp.key };
-    myDiagram.model.addNodeData(newemp);
-    myDiagram.commitTransaction("add employee");
-    }
-    }
-
-    // this is used to determine feedback during drags
-    function mayWorkFor(node1, node2) {
-    if (!(node1 instanceof go.Node)) return false;  // must be a Node
-    if (node1 === node2) return false;  // cannot work for yourself
-    if (node2.isInTreeOf(node1)) return false;  // cannot work for someone who works for you
-    return true;
-    }
-
-    // This function provides a common style for most of the TextBlocks.
-    // Some of these values may be overridden in a particular TextBlock.
-    function textStyle() {
-    return { font: "9pt  Segoe UI,sans-serif", stroke: "white" };
-    }
-
-    // This converter is used by the Picture.
-    function findHeadShot(key) {
-    if (key > 16) return ""; // There are only 16 images on the server
-    return "images/HS" + key + ".png"
-    };
+    <!-- Custom CSS -->
+    <link type="text/css" href="${resource(dir: 'css', file: 'agency.css')}" />
 
 
-    // define the Node template
-    myDiagram.nodeTemplate =
-    $(go.Node, "Auto",
-    { doubleClick: nodeDoubleClick },
-    { // handle dragging a Node onto a Node to (maybe) change the reporting relationship
-    mouseDragEnter: function (e, node, prev) {
-    var diagram = node.diagram;
-    var selnode = diagram.selection.first();
-    if (!mayWorkFor(selnode, node)) return;
-    var shape = node.findObject("SHAPE");
-    if (shape) {
-    shape._prevFill = shape.fill;  // remember the original brush
-    shape.fill = "darkred";
-    }
-    },
-    mouseDragLeave: function (e, node, next) {
-    var shape = node.findObject("SHAPE");
-    if (shape && shape._prevFill) {
-    shape.fill = shape._prevFill;  // restore the original brush
-    }
-    },
-    mouseDrop: function (e, node) {
-    var diagram = node.diagram;
-    var selnode = diagram.selection.first();  // assume just one Node in selection
-    if (mayWorkFor(selnode, node)) {
-    // find any existing link into the selected node
-    var link = selnode.findTreeParentLink();
-    if (link !== null) {  // reconnect any existing link
-    link.fromNode = node;
-    } else {  // else create a new link
-    diagram.toolManager.linkingTool.insertLink(node, node.port, selnode, selnode.port);
-    }
-    }
-    }
-    },
-    // for sorting, have the Node.text be the data.name
-    new go.Binding("text", "name"),
-    // bind the Part.layerName to control the Node's layer depending on whether it isSelected
-    new go.Binding("layerName", "isSelected", function(sel) { return sel ? "Foreground" : ""; }).ofObject(),
-    // define the node's outer shape
-    $(go.Shape, "Rectangle",
-    {
-    name: "SHAPE", fill: "white", stroke: null,
-    // set the port properties:
-    portId: "", fromLinkable: true, toLinkable: true, cursor: "pointer"
-    }),
-    $(go.Panel, "Horizontal",
-    $(go.Picture,
-    {
-    name: 'Picture',
-    desiredSize: new go.Size(39, 50),
-    margin: new go.Margin(6, 8, 6, 10),
-    },
-    new go.Binding("source", "key", findHeadShot)),
-    // define the panel where the text will appear
-    $(go.Panel, "Table",
-    {
-    maxSize: new go.Size(150, 999),
-    margin: new go.Margin(6, 10, 0, 3),
-    defaultAlignment: go.Spot.Left
-    },
-    $(go.RowColumnDefinition, { column: 2, width: 4 }),
-    $(go.TextBlock, textStyle(),  // the name
-    {
-    row: 0, column: 0, columnSpan: 5,
-    font: "12pt Segoe UI,sans-serif",
-    editable: true, isMultiline: false,
-    minSize: new go.Size(10, 16)
-    },
-    new go.Binding("text", "name").makeTwoWay()),
-    $(go.TextBlock, "Title: ", textStyle(),
-    { row: 1, column: 0 }),
-    $(go.TextBlock, textStyle(),
-    {
-    row: 1, column: 1, columnSpan: 4,
-    editable: true, isMultiline: false,
-    minSize: new go.Size(10, 14),
-    margin: new go.Margin(0, 0, 0, 3)
-    },
-    new go.Binding("text", "title").makeTwoWay()),
-    $(go.TextBlock, textStyle(),
-    { row: 2, column: 0 },
-    new go.Binding("text", "key", function(v) {return "ID: " + v;})),
-    $(go.TextBlock, textStyle(),
-    { row: 2, column: 3, },
-    new go.Binding("text", "parent", function(v) {return "Boss: " + v;})),
-    $(go.TextBlock, textStyle(),  // the comments
-    {
-    row: 3, column: 0, columnSpan: 5,
-    font: "italic 9pt sans-serif",
-    wrap: go.TextBlock.WrapFit,
-    editable: true,  // by default newlines are allowed
-    minSize: new go.Size(10, 14)
-    },
-    new go.Binding("text", "comments").makeTwoWay())
-    )  // end Table Panel
-    ) // end Horizontal Panel
-    );  // end Node
+    <!-- Custom Fonts -->
+    <link type="text/css" href="${resource(dir: 'css', file: 'font-awesome.css')}" />
+    <link type="text/css" href="${resource(dir: 'css', file: 'css_003.css')}" />
+    <link type="text/css" href="${resource(dir: 'css', file: 'css_002.css')}" />
+    <link type="text/css" href="${resource(dir: 'css', file: 'css_002.css')}" />
+    <link type="text/css" href="${resource(dir: 'css', file: 'css.css')}" />
+    <link type="text/css" href="${resource(dir: 'css', file: 'css_004.css')}" />
 
-    // define the Link template
-    myDiagram.linkTemplate =
-    $(go.Link, go.Link.Orthogonal,
-    { corner: 5, relinkableFrom: true, relinkableTo: true },
-    $(go.Shape, { strokeWidth: 4, stroke: "#00a4a4" }));  // the link shape
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
 
-    // read in the JSON-format data from the "mySavedModel" element
-    load();
-    }
+</head>
 
-    // Allow the user to edit text when a single node is selected
-    function onSelectionChanged(e) {
-    var node = e.diagram.selection.first();
-    if (node instanceof go.Node) {
-    updateProperties(node.data);
-    } else {
-    updateProperties(null);
-    }
-    }
+<body id="page-top" class="index">
 
-    // Update the HTML elements for editing the properties of the currently selected node, if any
-    function updateProperties(data) {
-    if (data === null) {
-    document.getElementById("propertiesPanel").style.display = "none";
-    document.getElementById("name").value = "";
-    document.getElementById("title").value = "";
-    document.getElementById("comments").value = "";
-    } else {
-    document.getElementById("propertiesPanel").style.display = "block";
-    document.getElementById("name").value = data.name || "";
-    document.getElementById("title").value = data.title || "";
-    document.getElementById("comments").value = data.comments || "";
-    }
-    }
-
-    // This is called when the user has finished inline text-editing
-    function onTextEdited(e) {
-    var tb = e.subject;
-    if (tb === null || !tb.name) return;
-    var node = tb.part;
-    if (node instanceof go.Node) {
-    updateProperties(node.data);
-    }
-    }
-
-    // Update the data fields when the text is changed
-    function updateData(text, field) {
-    var node = myDiagram.selection.first();
-    // maxSelectionCount = 1, so there can only be one Part in this collection
-    var data = node.data;
-    if (node instanceof go.Node && data !== null) {
-    var model = myDiagram.model;
-    model.startTransaction("modified " + field);
-    if (field === "name") {
-    model.setDataProperty(data, "name", text);
-    } else if (field === "title") {
-    model.setDataProperty(data, "title", text);
-    } else if (field === "comments") {
-    model.setDataProperty(data, "comments", text);
-    }
-    model.commitTransaction("modified " + field);
-    }
-    }
-
-    // Show the diagram's model in JSON format
-    function save() {
-    document.getElementById("mySavedModel").value = myDiagram.model.toJson();
-    myDiagram.isModified = false;
-    }
-    function load() {
-    myDiagram.model = go.Model.fromJson(document.getElementById("mySavedModel").value);
-    }
-</script>
-<body onload="init()">
-    <div id="sample">
-        <div id="myDiagram" style="background-color: #696969; border: solid 1px black; height: 500px"></div>
-        <div>
-            <div id="propertiesPanel" style="display: none; background-color: aliceblue; border: solid 1px black">
-                <b>Properties</b><br>
-                Name: <input id="name" value="" onchange="updateData(this.value, 'name')" type="text"><br>
-                Title: <input id="title" value="" onchange="updateData(this.value, 'title')" type="text"><br>
-                Comments: <input id="comments" value="" onchange="updateData(this.value, 'comments')" type="text"><br>
-            </div>
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand page-scroll" href="#page-top">Start Bootstrap</a>
         </div>
-        %{--<p>--}%
-            %{--This editable organizational chart sample color-codes the Nodes according to the tree level in the hierarchy.--}%
-        %{--</p>--}%
-        %{--<p>--}%
-            %{--Double click on a node in order to add a person.--}%
-        %{--</p>--}%
-        %{--<p>--}%
-            %{--Drag a node onto another in order to change relationships.--}%
-            %{--You can also draw a link from a node's background to other nodes that have no "boss".--}%
-        %{--</p>--}%
-        %{--<p>--}%
-            %{--Select a node to edit/update node data values.--}%
-        %{--</p>--}%
-        <div>
-            <div>
-                <button id="SaveButton" onclick="save()">Write</button>
-                <button onclick="load()">Read</button>
-            </div>
-            <textarea id="mySavedModel" style="width:0%;height:0px" >{ "class": "go.TreeModel",
-            "nodeDataArray": [
-            {"key":"1", "name":"Stella Payne Diaz", "title":"CEO"},
-            {"key":"2", "name":"Luke Warm", "title":"VP Marketing/Sales", "parent":"1"},
-            {"key":"3", "name":"Meg Meehan Hoffa", "title":"Sales", "parent":"2"},
-            {"key":"4", "name":"Peggy Flaming", "title":"VP Engineering", "parent":"1"},
-            {"key":"5", "name":"Saul Wellingood", "title":"Manufacturing", "parent":"4"},
-            {"key":"6", "name":"Al Ligori", "title":"Marketing", "parent":"2"},
-            {"key":"7", "name":"Dot Stubadd", "title":"Sales Rep", "parent":"3"},
-            {"key":"8", "name":"Les Ismore", "title":"Project Mgr", "parent":"5"},
-            {"key":"9", "name":"April Lynn Parris", "title":"Events Mgr", "parent":"6"},
-            {"key":"10", "name":"Xavier Breath", "title":"Engineering", "parent":"4"},
-            {"key":"11", "name":"Anita Hammer", "title":"Process", "parent":"5"},
-            {"key":"12", "name":"Billy Aiken", "title":"Software", "parent":"10"},
-            {"key":"13", "name":"Stan Wellback", "title":"Testing", "parent":"10"},
-            {"key":"14", "name":"Marge Innovera", "title":"Hardware", "parent":"10"},
-            {"key":"15", "name":"Evan Elpus", "title":"Quality", "parent":"5"},
-            {"key":"16", "name":"Lotta B. Essen", "title":"Sales Rep", "parent":"3"}
-            ]
-            }
-            </textarea>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav navbar-right">
+                <li class="hidden active">
+                    <a href="#page-top"></a>
+                </li>
+                <li class="">
+                    <a class="page-scroll" href="#services">Services</a>
+                </li>
+                <li class="">
+                    <a class="page-scroll" href="#portfolio">Portfolio</a>
+                </li>
+                <li class="">
+                    <a class="page-scroll" href="#about">About</a>
+                </li>
+                <li class="">
+                    <a class="page-scroll" href="#team">Team</a>
+                </li>
+                <li class="">
+                    <a class="page-scroll" href="#contact">Contact</a>
+                </li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container-fluid -->
+</nav>
+
+<!-- Header -->
+<header>
+    <div class="container">
+        <div class="intro-text">
+            <div class="intro-lead-in">Welcome To Our Studio!</div>
+            <div class="intro-heading">It's Nice To Meet You</div>
+            <a href="#services" class="page-scroll btn btn-xl">Tell Me More</a>
         </div>
     </div>
+</header>
+
+<!-- Services Section -->
+<section id="services">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading">Services</h2>
+                <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-md-4">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-shopping-cart fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">E-Commerce</h4>
+                <p class="text-muted">Lorem ipsum dolor sit amet,
+                consectetur adipisicing elit. Minima maxime quam architecto quo
+                inventore harum ex magni, dicta impedit.</p>
+            </div>
+            <div class="col-md-4">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-laptop fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Responsive Design</h4>
+                <p class="text-muted">Lorem ipsum dolor sit amet,
+                consectetur adipisicing elit. Minima maxime quam architecto quo
+                inventore harum ex magni, dicta impedit.</p>
+            </div>
+            <div class="col-md-4">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-lock fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Web Security</h4>
+                <p class="text-muted">Lorem ipsum dolor sit amet,
+                consectetur adipisicing elit. Minima maxime quam architecto quo
+                inventore harum ex magni, dicta impedit.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Portfolio Grid Section -->
+<section id="portfolio" class="bg-light-gray">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading">Portfolio</h2>
+                <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal1" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="/images/roundicons.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Round Icons</h4>
+                    <p class="text-muted">Graphic Design</p>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal2" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="/images/startup-framework.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Startup Framework</h4>
+                    <p class="text-muted">Website Design</p>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal3" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/treehouse.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Treehouse</h4>
+                    <p class="text-muted">Website Design</p>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal4" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/golden.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Golden</h4>
+                    <p class="text-muted">Website Design</p>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal5" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/escape.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Escape</h4>
+                    <p class="text-muted">Website Design</p>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-6 portfolio-item">
+                <a href="#portfolioModal6" class="portfolio-link" data-toggle="modal">
+                    <div class="portfolio-hover">
+                        <div class="portfolio-hover-content">
+                            <i class="fa fa-plus fa-3x"></i>
+                        </div>
+                    </div>
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/dreams.png" class="img-responsive" alt="">
+                </a>
+                <div class="portfolio-caption">
+                    <h4>Dreams</h4>
+                    <p class="text-muted">Website Design</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading">About</h2>
+                <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <ul class="timeline">
+                    <li>
+                        <div class="timeline-image">
+                            <img class="img-circle img-responsive" src="Agency%20-%20Start%20Bootstrap%20Theme_files/1.jpg" alt="">
+                        </div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>2009-2011</h4>
+                                <h4 class="subheading">Our Humble Beginnings</h4>
+                            </div>
+                            <div class="timeline-body">
+                                <p class="text-muted">Lorem ipsum
+                                dolor sit amet, consectetur adipisicing elit. Sunt ut voluptatum eius
+                                sapiente, totam reiciendis temporibus qui quibusdam, recusandae sit vero
+                                unde, sed, incidunt et ea quo dolore laudantium consectetur!</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image">
+                            <img class="img-circle img-responsive" src="Agency%20-%20Start%20Bootstrap%20Theme_files/2_002.jpg" alt="">
+                        </div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>March 2011</h4>
+                                <h4 class="subheading">An Agency is Born</h4>
+                            </div>
+                            <div class="timeline-body">
+                                <p class="text-muted">Lorem ipsum
+                                dolor sit amet, consectetur adipisicing elit. Sunt ut voluptatum eius
+                                sapiente, totam reiciendis temporibus qui quibusdam, recusandae sit vero
+                                unde, sed, incidunt et ea quo dolore laudantium consectetur!</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="timeline-image">
+                            <img class="img-circle img-responsive" src="Agency%20-%20Start%20Bootstrap%20Theme_files/3.jpg" alt="">
+                        </div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>December 2012</h4>
+                                <h4 class="subheading">Transition to Full Service</h4>
+                            </div>
+                            <div class="timeline-body">
+                                <p class="text-muted">Lorem ipsum
+                                dolor sit amet, consectetur adipisicing elit. Sunt ut voluptatum eius
+                                sapiente, totam reiciendis temporibus qui quibusdam, recusandae sit vero
+                                unde, sed, incidunt et ea quo dolore laudantium consectetur!</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image">
+                            <img class="img-circle img-responsive" src="Agency%20-%20Start%20Bootstrap%20Theme_files/4.jpg" alt="">
+                        </div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>July 2014</h4>
+                                <h4 class="subheading">Phase Two Expansion</h4>
+                            </div>
+                            <div class="timeline-body">
+                                <p class="text-muted">Lorem ipsum
+                                dolor sit amet, consectetur adipisicing elit. Sunt ut voluptatum eius
+                                sapiente, totam reiciendis temporibus qui quibusdam, recusandae sit vero
+                                unde, sed, incidunt et ea quo dolore laudantium consectetur!</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image">
+                            <h4>Be Part
+                                <br>Of Our
+                                <br>Story!</h4>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Team Section -->
+<section id="team" class="bg-light-gray">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading">Our Amazing Team</h2>
+                <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="team-member">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/1_002.jpg" class="img-responsive img-circle" alt="">
+                    <h4>Kay Garland</h4>
+                    <p class="text-muted">Lead Designer</p>
+                    <ul class="list-inline social-buttons">
+                        <li><a href="#"><i class="fa fa-twitter"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-facebook"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-linkedin"></i></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="team-member">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/2.jpg" class="img-responsive img-circle" alt="">
+                    <h4>Larry Parker</h4>
+                    <p class="text-muted">Lead Marketer</p>
+                    <ul class="list-inline social-buttons">
+                        <li><a href="#"><i class="fa fa-twitter"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-facebook"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-linkedin"></i></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="team-member">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/3_002.jpg" class="img-responsive img-circle" alt="">
+                    <h4>Diana Pertersen</h4>
+                    <p class="text-muted">Lead Developer</p>
+                    <ul class="list-inline social-buttons">
+                        <li><a href="#"><i class="fa fa-twitter"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-facebook"></i></a>
+                        </li>
+                        <li><a href="#"><i class="fa fa-linkedin"></i></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 text-center">
+                <p class="large text-muted">Lorem ipsum dolor sit
+                amet, consectetur adipisicing elit. Aut eaque, laboriosam veritatis,
+                quos non quis ad perspiciatis, totam corporis ea, alias ut unde.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Clients Aside -->
+<aside class="clients">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3 col-sm-6">
+                <a href="#">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/envato.jpg" class="img-responsive img-centered" alt="">
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="#">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/designmodo.jpg" class="img-responsive img-centered" alt="">
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="#">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/themeforest.jpg" class="img-responsive img-centered" alt="">
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <a href="#">
+                    <img src="Agency%20-%20Start%20Bootstrap%20Theme_files/creative-market.jpg" class="img-responsive img-centered" alt="">
+                </a>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- Contact Section -->
+<section id="contact">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading">Contact Us</h2>
+                <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <form name="sentMessage" id="contactForm" novalidate="">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <input class="form-control" placeholder="Your Name *" id="name" required="" data-validation-required-message="Please enter your name." type="text">
+                                <p class="help-block text-danger"></p>
+                            </div>
+                            <div class="form-group">
+                                <input class="form-control" placeholder="Your Email *" id="email" required="" data-validation-required-message="Please enter your email address." type="email">
+                                <p class="help-block text-danger"></p>
+                            </div>
+                            <div class="form-group">
+                                <input class="form-control" placeholder="Your Phone *" id="phone" required="" data-validation-required-message="Please enter your phone number." type="tel">
+                                <p class="help-block text-danger"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <textarea class="form-control" placeholder="Your Message *" id="message" required="" data-validation-required-message="Please enter a message."></textarea>
+                                <p class="help-block text-danger"></p>
+                            </div>
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="col-lg-12 text-center">
+                            <div id="success"></div>
+                            <button type="submit" class="btn btn-xl">Send Message</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <span class="copyright">Copyright © Your Website 2014</span>
+            </div>
+            <div class="col-md-4">
+                <ul class="list-inline social-buttons">
+                    <li><a href="#"><i class="fa fa-twitter"></i></a>
+                    </li>
+                    <li><a href="#"><i class="fa fa-facebook"></i></a>
+                    </li>
+                    <li><a href="#"><i class="fa fa-linkedin"></i></a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <ul class="list-inline quicklinks">
+                    <li><a href="#">Privacy Policy</a>
+                    </li>
+                    <li><a href="#">Terms of Use</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Portfolio Modals -->
+<!-- Use the modals below to showcase details about your portfolio projects! -->
+
+<!-- Portfolio Modal 1 -->
+<div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <!-- Project Details Go Here -->
+                        <h2>Project Name</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/roundicons-free.png" alt="">
+                        <p>Use this area to describe your project.
+                        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Est blanditiis
+                        dolorem culpa incidunt minus dignissimos deserunt repellat aperiam
+                        quasi sunt officia expedita beatae cupiditate, maiores repudiandae,
+                        nostrum, reiciendis facere nemo!</p>
+                        <p>
+                            <strong>Want these icons in this portfolio item sample?</strong>You can download 60 of them for free, courtesy of <a href="https://getdpd.com/cart/hoplink/18076?referrer=bvbo4kax5k8ogc">RoundIcons.com</a>, or you can purchase the 1500 icon set <a href="https://getdpd.com/cart/hoplink/18076?referrer=bvbo4kax5k8ogc">here</a>.</p>
+                        <ul class="list-inline">
+                            <li>Date: July 2014</li>
+                            <li>Client: Round Icons</li>
+                            <li>Category: Graphic Design</li>
+                        </ul>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal 2 -->
+<div class="portfolio-modal modal fade" id="portfolioModal2" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <h2>Project Heading</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/startup-framework-preview.png" alt="">
+                        <p><a href="http://designmodo.com/startup/?u=787">Startup Framework</a>
+                            is a website builder for professionals. Startup Framework contains
+                            components and complex blocks (PSD+HTML Bootstrap themes and templates)
+                            which can easily be integrated into almost any design. All of these
+                            components are made in the same style, and can easily be integrated into
+                            projects, allowing you to create hundreds of solutions for your future
+                            projects.</p>
+                        <p>You can preview Startup Framework <a href="http://designmodo.com/startup/?u=787">here</a>.</p>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal 3 -->
+<div class="portfolio-modal modal fade" id="portfolioModal3" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <!-- Project Details Go Here -->
+                        <h2>Project Name</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/treehouse-preview.png" alt="">
+                        <p>Treehouse is a free PSD web template built by <a href="https://www.behance.net/MathavanJaya">Mathavan Jaya</a>. This is bright and spacious design perfect for people or startup companies looking to showcase their apps or other projects.</p>
+                        <p>You can download the PSD template in this portfolio sample item at <a href="http://freebiesxpress.com/gallery/treehouse-free-psd-web-template/">FreebiesXpress.com</a>.</p>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal 4 -->
+<div class="portfolio-modal modal fade" id="portfolioModal4" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <!-- Project Details Go Here -->
+                        <h2>Project Name</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/golden-preview.png" alt="">
+                        <p>Start Bootstrap's Agency theme is based on Golden, a free PSD website template built by <a href="https://www.behance.net/MathavanJaya">Mathavan Jaya</a>.
+                        Golden is a modern and clean one page web template that was made
+                        exclusively for Best PSD Freebies. This template has a great portfolio,
+                        timeline, and meet your team sections that can be easily modified to fit
+                        your needs.</p>
+                        <p>You can download the PSD template in this portfolio sample item at <a href="http://freebiesxpress.com/gallery/golden-free-one-page-web-template/">FreebiesXpress.com</a>.</p>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal 5 -->
+<div class="portfolio-modal modal fade" id="portfolioModal5" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <!-- Project Details Go Here -->
+                        <h2>Project Name</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/escape-preview.png" alt="">
+                        <p>Escape is a free PSD web template built by <a href="https://www.behance.net/MathavanJaya">Mathavan Jaya</a>.
+                        Escape is a one page web template that was designed with agencies in
+                        mind. This template is ideal for those looking for a simple one page
+                        solution to describe your business and offer your services.</p>
+                        <p>You can download the PSD template in this portfolio sample item at <a href="http://freebiesxpress.com/gallery/escape-one-page-psd-web-template/">FreebiesXpress.com</a>.</p>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal 6 -->
+<div class="portfolio-modal modal fade" id="portfolioModal6" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal">
+            <div class="lr">
+                <div class="rl">
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-lg-offset-2">
+                    <div class="modal-body">
+                        <!-- Project Details Go Here -->
+                        <h2>Project Name</h2>
+                        <p class="item-intro text-muted">Lorem ipsum dolor sit amet consectetur.</p>
+                        <img class="img-responsive img-centered" src="Agency%20-%20Start%20Bootstrap%20Theme_files/dreams-preview.png" alt="">
+                        <p>Dreams is a free PSD web template built by <a href="https://www.behance.net/MathavanJaya">Mathavan Jaya</a>.
+                        Dreams is a modern one page web template designed for almost any
+                        purpose. It’s a beautiful template that’s designed with the Bootstrap
+                        framework in mind.</p>
+                        <p>You can download the PSD template in this portfolio sample item at <a href="http://freebiesxpress.com/gallery/dreams-free-one-page-web-template/">FreebiesXpress.com</a>.</p>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal"><i class="fa fa-times"></i> Close Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- jQuery -->
+<script src="${resource(dir: 'js', file: 'jquery_002.js')}"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/bootstrap.js"></script>
+
+<!-- Plugin JavaScript -->
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/jquery.js"></script>
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/classie.js"></script>
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/cbpAnimatedHeader.js"></script>
+
+<!-- Contact Form JavaScript -->
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/jqBootstrapValidation.js"></script>
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/contact_me.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="Agency%20-%20Start%20Bootstrap%20Theme_files/agency.js"></script>
 
 
 
-    </body>
-</html>
+
+</body></html>
